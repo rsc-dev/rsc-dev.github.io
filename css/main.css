@@ -1,0 +1,147 @@
+/* Style for our header texts
+	* --------------------------------------- */
+	
+	.welcome {
+		display: block;
+		width: 50%;
+		margin-right: auto;
+		margin-left: auto;
+	}
+	
+	.welcome p{
+		font-weight: 200;
+		font-size: 2em;
+		
+		line-height: 1.125em;
+		color: #ffffff;
+	}
+
+	.fma p{
+		vertical-align: middle;
+		display: table-cell;
+		
+		font-weight: 200;
+		font-size: 2em;
+		
+		line-height: 1.125em;
+		color: #ffffff;
+			
+		padding-right: 100px;
+	}
+
+	.fma a {
+		color: #ffffff;
+		text-decoration: underline;
+	}
+	
+	#fma_left {
+		background-image: url(http://fuzzmyapp.com/images/FuzzMyApp.png);
+		float: left;
+		width: 50%;
+		height: 341px;
+		background-size: auto 100%;
+		background-repeat: no-repeat; 
+		background-position: center center;
+	}
+	
+	#fma_right {
+		float: right;
+		height: 341px;
+		width: 50%;
+		display: table;
+		text-align: center-left;
+		margin-right: 100 px;
+	}
+	
+	.projects {
+		text-align: center;
+		color: #000000;
+		
+		display: block;
+		width: 50%;
+		margin-right: auto;
+		margin-left: auto;
+	}
+	
+	.slide {
+		text-align: center;
+		color: #000000;
+		
+		display: block;
+		width: 50%;
+		margin-right: auto;
+		margin-left: auto;		
+	}
+	
+	.slide h1 {
+		text-align: center;
+	}
+
+	.slide p{
+		font-weight: 200;
+		font-size: 2em;
+		
+		line-height: 1.125em;
+		color: #000000;
+	}
+	
+	.slide a{
+		color: #000000;
+		text-decoration: underline;
+	}
+	
+	.projects h1{
+		font-size: 5em;
+		color: #000000;
+		margin: 0;
+	}
+	
+	.projects p{
+		font-weight: 200;
+		font-size: 2em;
+		
+		line-height: 1.125em;
+		color: #000000;
+	}
+	
+	
+	
+	.contact {
+		text-align: center;
+	}
+	
+	.contact p {
+		font-size: 2em;
+		color: #ffffff;
+		text-decoration: none;
+	}
+	
+	.contact a {
+		color: #ffffff;
+		text-decoration: underline;
+	}
+	
+	.section{
+		font-family: "Apercu Regular", Calibri, sans-serif;
+		font-style: normal;
+		
+		margin: 0;
+		padding: 0;
+	}
+
+	/* Overwriting styles for control arrows for slides
+	* --------------------------------------- */
+	
+	.fp-controlArrow {
+		border-color: #000000;
+	}
+	
+	.fp-controlArrow.fp-prev {
+		border-right-color: #000000;
+		left: 200px;
+	}
+	.fp-controlArrow.fp-next{
+		border-left-color: #000000;
+		right: 200px;
+	}
+
