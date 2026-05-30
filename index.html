@@ -10,6 +10,14 @@
   <meta property="og:title" content="Radosław Matusiak — Application Security" />
   <meta property="og:description" content="Senior Application & Product Security Engineer. I break things to prove they hold." />
   <meta property="og:url" content="https://www.matusiak.me/" />
+  <meta property="og:image" content="https://www.matusiak.me/og.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+  <meta property="og:image:alt" content="Radosław Matusiak — terminal homepage" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Radosław Matusiak — Application Security" />
+  <meta name="twitter:description" content="Senior Application & Product Security Engineer. I break things to prove they hold." />
+  <meta name="twitter:image" content="https://www.matusiak.me/og.png" />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -91,7 +99,7 @@
   </noscript>
 
   <main class="term" id="term" aria-label="Interactive terminal. Type help for commands." hidden>
-    <div class="out" id="out"></div>
+    <div class="out" id="out" role="log" aria-live="polite" aria-atomic="false"></div>
     <div class="inputline" id="inputline" style="display:none">
       <span class="prompt" id="prompt">visitor@matusiak.me:~$</span>
       <span class="cmd" id="cmd" contenteditable="true" spellcheck="false" autocapitalize="off" autocorrect="off" role="textbox" aria-label="command input"></span>
@@ -113,6 +121,26 @@
     var game = null;
     var effectActive = false;
     function setPrompt(t){ promptText = t; var el = document.getElementById("prompt"); if(el){ el.textContent = t; } }
+
+    // persistent history (across visits) + tab completion
+    var HKEY = "matusiak.tty.history";
+    try{ var _h = JSON.parse(localStorage.getItem(HKEY) || "[]"); if(_h && _h.length){ history = _h; hidx = history.length; } }catch(e){}
+    function saveHistory(){ try{ localStorage.setItem(HKEY, JSON.stringify(history.slice(-100))); }catch(e){} }
+
+    var COMPLETIONS = ["about","banner","clear","crack","github","help","linkedin","links","ls","mail","pgp","whoami"];
+    function commonPrefix(arr){
+      if(!arr.length){ return ""; }
+      var p = arr[0], i;
+      for(i=1;i<arr.length;i++){
+        while(arr[i].indexOf(p) !== 0){ p = p.slice(0, -1); if(!p){ return ""; } }
+      }
+      return p;
+    }
+    function printCompletions(list){
+      line("<span class=\"prompt\">" + esc(promptText) + "</span> <span class=\"echo\">" + esc(cmdEl.textContent) + "</span>");
+      line(list.join("   "), "muted");
+      scroll();
+    }
 
     var DATA = {
       role: "Senior Application Security / Product Security Engineer",
@@ -152,10 +180,13 @@
         line("  about      profile / bio");
         line("  links      where to find me");
         line("  github · linkedin · mail   open directly");
+        line("  pgp        my OpenPGP public key");
         line("  crack      break the cipher  ·  a small game");
         line("  banner     reprint the header");
         line("  clear      wipe the screen");
         line("  help       this");
+        blank();
+        line("[tab] complete · [↑]/[↓] history · ctrl-l clear", "dim");
       },
       whoami: function(){
         line("the one reading this sentence.", "gold");
@@ -169,6 +200,16 @@
         line("  linkedin   " + link(DATA.links.linkedin, "in/radoslawmatusiak"));
         line("  github     " + link(DATA.links.github, "github.com/rsc-dev"));
         line("  mail       " + link(DATA.links.mail, "radoslaw@matusiak.me"));
+        line("  pgp        " + link("pgp.asc", "pgp.asc"));
+      },
+      pgp: function(){
+        line("OpenPGP public key", "gold");
+        line("  uid          radoslaw@matusiak.me");
+        line("  fingerprint  302D 7626 8551 898D 4789  0BE2 702F 6FBC 8585 8112", "gold");
+        line("  key id       702F6FBC85858112");
+        line("  type         Ed25519 (EdDSA)");
+        line("  download     " + link("pgp.asc", "pgp.asc"));
+        line("  verify what i sign. fuzz everything else.", "muted");
       },
       github: function(){ line("opening github …", "muted"); window.open(DATA.links.github, "_blank", "noopener"); },
       linkedin: function(){ line("opening linkedin …", "muted"); window.open(DATA.links.linkedin, "_blank", "noopener"); },
@@ -180,7 +221,7 @@
       clear: function(){ out.innerHTML = ""; },
       exit: function(){ line("there is no exit from a strange loop.", "muted"); },
       sudo: function(){ line("you already hold all the power you brought with you.", "muted"); },
-      ls:  function(){ line("about  crack  links  whoami"); },
+      ls:  function(){ line("about  crack  links  pgp  whoami"); },
       man: function(){ line("read the source. it documents itself.", "muted"); },
       // hidden easter egg — not listed in help/ls
       "void":  function(){ glitchEat(); },
@@ -365,7 +406,7 @@
       line("<span class=\"prompt\">" + esc(promptText) + "</span> <span class=\"echo\">" + esc(input) + "</span>");
       if(game){ if(input !== ""){ guessCrack(input.toLowerCase()); } return; }
       if(!input){ return; }
-      history.push(input); hidx = history.length;
+      history.push(input); hidx = history.length; saveHistory();
       var parts = input.split(/\s+/);
       var name = parts[0].toLowerCase();
       var arg  = (parts[1] || "").toLowerCase();
@@ -397,12 +438,33 @@
         cmdEl.textContent = "";
         run(v);
         scroll();
+      } else if(e.key === "Tab"){
+        e.preventDefault();
+        if(game){ return; }
+        var cur = cmdEl.textContent.trim().toLowerCase();
+        if(!cur){ printCompletions(COMPLETIONS); return; }
+        var matches = COMPLETIONS.filter(function(c){ return c.indexOf(cur) === 0; });
+        if(matches.length === 1){ cmdEl.textContent = matches[0] + " "; placeCaretEnd(cmdEl); }
+        else if(matches.length > 1){
+          var cp = commonPrefix(matches);
+          if(cp.length > cur.length){ cmdEl.textContent = cp; placeCaretEnd(cmdEl); }
+          printCompletions(matches);
+        }
       } else if(e.key === "ArrowUp"){
         e.preventDefault();
         if(hidx > 0){ hidx--; cmdEl.textContent = history[hidx] || ""; placeCaretEnd(cmdEl); }
       } else if(e.key === "ArrowDown"){
         e.preventDefault();
         if(hidx < history.length){ hidx++; cmdEl.textContent = history[hidx] || ""; placeCaretEnd(cmdEl); }
+      } else if(e.ctrlKey && (e.key === "l" || e.key === "L")){
+        e.preventDefault(); out.innerHTML = "";
+      } else if(e.ctrlKey && (e.key === "c" || e.key === "C")){
+        if(window.getSelection && String(window.getSelection())){ return; }  // let copy work
+        e.preventDefault();
+        line("<span class=\"prompt\">" + esc(promptText) + "</span> <span class=\"echo\">" + esc(cmdEl.textContent) + "</span>^C");
+        cmdEl.textContent = "";
+        if(game){ endCrack(); }
+        scroll();
       }
     });
 
