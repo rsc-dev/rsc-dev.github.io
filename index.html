@@ -1,17 +1,325 @@
 <!DOCTYPE html>
-<html xmlns="http://www.w3.org/1999/xhtml">
-
+<html lang="en">
 <head>
-	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-	<title>Matusiak.me</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Radosław Matusiak — Application Security</title>
+  <meta name="author" content="Radosław Matusiak" />
+  <meta name="description" content="Radosław Matusiak — Senior Application & Product Security Engineer. 15+ years in fuzzing, penetration testing, threat modeling and secure SDLC." />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="Radosław Matusiak — Application Security" />
+  <meta property="og:description" content="Senior Application & Product Security Engineer. I break things to prove they hold." />
+  <meta property="og:url" content="https://www.matusiak.me/" />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+  <style>
+  :root{
+    --bg:#0a0a0b; --text:#e8e0cc; --gold:#d4af37; --brass:#7d7458; --dim:#4a4636;
+    --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0; padding:0; height:100%;}
+  body{
+    background:var(--bg); color:var(--text); font-family:var(--mono);
+    font-size:15px; line-height:1.7; min-height:100vh;
+    -webkit-font-smoothing:antialiased; overflow-wrap:anywhere;
+  }
+  /* faint CRT scanlines + vignette — kept very subtle */
+  body::before{
+    content:""; position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:repeating-linear-gradient(180deg, rgba(212,175,55,.025) 0 1px, transparent 1px 3px);
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:2; pointer-events:none;
+    background:radial-gradient(120% 120% at 50% 40%, transparent 55%, rgba(0,0,0,.55) 100%);
+  }
 
-	<meta name="author" content="Radoslaw Matusiak" />
+  .term{position:relative; z-index:1; min-height:100vh; max-width:900px;
+    margin:0 auto; padding:clamp(18px,4vh,48px) clamp(16px,4vw,40px) 28vh; cursor:text;}
+  .out{white-space:pre-wrap;}
+  .ln{margin:0;}
+  .gold{color:var(--gold); text-shadow:0 0 8px rgba(212,175,55,.25);}
+  .bold{font-weight:700;}
+  .muted{color:var(--brass);}
+  .dim{color:var(--dim);}
+  .name{color:var(--gold); font-weight:700; letter-spacing:.22em;
+    font-size:clamp(1.1rem,4.4vw,1.7rem); text-shadow:0 0 14px rgba(212,175,55,.3);}
+  .rule{color:var(--dim);}
+  a{color:var(--gold); text-decoration:none; border-bottom:1px dotted rgba(212,175,55,.4);}
+  a:hover,a:focus{text-shadow:0 0 8px rgba(212,175,55,.5); border-bottom-color:var(--gold);}
 
-	<link rel="stylesheet" type="text/css" href="css/jquery.fullPage.css" />
-	<link rel="stylesheet" type="text/css" href="css/main.css" />
-	</style>
+  .inputline{display:flex; align-items:baseline; gap:.6ch;}
+  .prompt{color:var(--gold); white-space:nowrap;}
+  .cmd{flex:1; position:relative; white-space:pre-wrap; outline:none; min-width:1ch; caret-color:var(--gold);}
+
+  .echo{color:var(--gold);}        /* echoed command after Enter */
+  .err{color:#c9683f;}
+
+  /* screen-reader / no-JS static content: present for AT and crawlers */
+  .sr{position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+    overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; border:0;}
+  .nojs{max-width:900px; margin:0 auto; padding:48px 24px; color:var(--text);}
+  .nojs a{display:inline-block; margin-right:18px;}
+  </style>
 </head>
 <body>
-.
+  <!-- Always-present content for screen readers, crawlers, and the no-JS path -->
+  <div class="sr">
+    <h1>Radosław Matusiak</h1>
+    <p>Senior Application &amp; Product Security Engineer. 15+ years in application &amp; product security,
+       fuzzing, penetration testing, threat modeling and secure SDLC.</p>
+    <ul>
+      <li><a href="https://www.linkedin.com/in/radoslawmatusiak/">LinkedIn</a></li>
+      <li><a href="https://github.com/rsc-dev">GitHub</a></li>
+      <li><a href="mailto:radoslaw@matusiak.me">Email</a></li>
+    </ul>
+  </div>
+
+  <noscript>
+    <div class="nojs">
+      <h1 class="name">RADOSŁAW MATUSIAK</h1>
+      <p>Senior Application &amp; Product Security Engineer — “I break things to prove they hold.”</p>
+      <p>15+ years: application &amp; product security, fuzzing, penetration testing, threat modeling, secure SDLC.</p>
+      <p>
+        <a href="https://www.linkedin.com/in/radoslawmatusiak/">linkedin</a>
+        <a href="https://github.com/rsc-dev">github</a>
+        <a href="mailto:radoslaw@matusiak.me">mail</a>
+      </p>
+    </div>
+  </noscript>
+
+  <main class="term" id="term" aria-label="Interactive terminal. Type help for commands." hidden>
+    <div class="out" id="out"></div>
+    <div class="inputline" id="inputline" style="display:none">
+      <span class="prompt" id="prompt">visitor@matusiak.me:~$</span>
+      <span class="cmd" id="cmd" contenteditable="true" spellcheck="false" autocapitalize="off" autocorrect="off" role="textbox" aria-label="command input"></span>
+    </div>
+  </main>
+
+  <script>
+  (function(){
+    "use strict";
+    var term = document.getElementById("term");
+    var out  = document.getElementById("out");
+    var inputline = document.getElementById("inputline");
+    var cmdEl = document.getElementById("cmd");
+    term.hidden = false;
+
+    var reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    var promptText = "visitor@matusiak.me:~$";
+    var history = [], hidx = 0;
+    var game = null;
+    function setPrompt(t){ promptText = t; var el = document.getElementById("prompt"); if(el){ el.textContent = t; } }
+
+    var DATA = {
+      role: "Senior Application Security / Product Security Engineer",
+      bio: [
+        "15+ years breaking and hardening software.",
+        "application & product security · fuzzing · penetration testing",
+        "threat modeling · secure SDLC · embedded · telecom",
+        "Python · C# · Java · C/C++",
+        "Glia · Argyle · UTC Fire & Security · ADVA · FuzzMyApp"
+      ],
+      links: {
+        linkedin: "https://www.linkedin.com/in/radoslawmatusiak/",
+        github:   "https://github.com/rsc-dev",
+        mail:     "mailto:radoslaw@matusiak.me"
+      }
+    };
+
+    function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+    function line(html, cls){
+      var p = document.createElement("p");
+      p.className = "ln" + (cls ? " " + cls : "");
+      p.innerHTML = html;
+      out.appendChild(p);
+    }
+    function blank(){ line("&nbsp;"); }
+    function rule(){ line(new Array(46).join("─"), "rule"); }
+    function scroll(){ window.scrollTo(0, document.body.scrollHeight); }
+    function link(href, text){
+      var ext = href.indexOf("http") === 0 ? " target=\"_blank\" rel=\"noopener\"" : "";
+      return "<a href=\"" + href + "\"" + ext + ">" + esc(text) + "</a>";
+    }
+
+    var COMMANDS = {
+      help: function(){
+        line("available commands", "gold");
+        line("  whoami     who is this");
+        line("  about      profile / bio");
+        line("  links      where to find me");
+        line("  github · linkedin · mail   open directly");
+        line("  crack      break the cipher  ·  a small game");
+        line("  banner     reprint the header");
+        line("  clear      wipe the screen");
+        line("  help       this");
+      },
+      whoami: function(){
+        line("the one reading this sentence.", "gold");
+        line(DATA.role, "muted");
+      },
+      about: function(){
+        DATA.bio.forEach(function(l){ line(esc(l)); });
+      },
+      bio: function(){ COMMANDS.about(); },
+      links: function(){
+        line("  linkedin   " + link(DATA.links.linkedin, "in/radoslawmatusiak"));
+        line("  github     " + link(DATA.links.github, "github.com/rsc-dev"));
+        line("  mail       " + link(DATA.links.mail, "radoslaw@matusiak.me"));
+      },
+      github: function(){ line("opening github …", "muted"); window.open(DATA.links.github, "_blank", "noopener"); },
+      linkedin: function(){ line("opening linkedin …", "muted"); window.open(DATA.links.linkedin, "_blank", "noopener"); },
+      mail: function(){ window.location.href = DATA.links.mail; },
+      crack: function(){ startCrack(); },
+      play:  function(){ startCrack(); },
+      game:  function(){ startCrack(); },
+      banner: function(){ printBanner(); },
+      clear: function(){ out.innerHTML = ""; },
+      exit: function(){ line("there is no exit from a strange loop.", "muted"); },
+      sudo: function(){ line("you already hold all the power you brought with you.", "muted"); },
+      ls:  function(){ line("about  crack  links  whoami"); },
+      man: function(){ line("read the source. it documents itself.", "muted"); }
+    };
+
+    // ---- crack: a small cipher-breaking game ----
+    function startCrack(){
+      var secret = "";
+      for(var i=0;i<4;i++){ secret += (1 + Math.floor(Math.random()*6)); }
+      game = { secret:secret, tries:0, max:10 };
+      blank();
+      line("◈ CRACK THE CIPHER", "gold");
+      line("a 4-symbol lock — each symbol a digit 1–6.", "muted");
+      line("<span class='gold'>●</span> right symbol, right place   <span class='muted'>○</span> right symbol, wrong place   <span class='dim'>·</span> nothing", "muted");
+      line("enter 4 digits (e.g. 1234). 10 attempts. type `q` to abandon.", "muted");
+      setPrompt("crack:~$");
+    }
+
+    function endCrack(){ game = null; setPrompt("visitor@matusiak.me:~$"); }
+
+    function guessCrack(g){
+      if(g === "q" || g === "quit" || g === "exit"){
+        line("you step back from the lock. the cipher was <span class='gold'>" + game.secret + "</span>.", "muted");
+        endCrack(); return;
+      }
+      if(!/^[1-6]{4}$/.test(g)){
+        line("a guess is 4 digits, each 1–6 — or `q` to abandon.", "err"); return;
+      }
+      game.tries++;
+      var s = game.secret.split(""), gg = g.split("");
+      var su = [false,false,false,false], gu = [false,false,false,false];
+      var exact = 0, present = 0, k, j;
+      for(k=0;k<4;k++){ if(gg[k] === s[k]){ exact++; su[k] = true; gu[k] = true; } }
+      for(k=0;k<4;k++){
+        if(gu[k]){ continue; }
+        for(j=0;j<4;j++){ if(!su[j] && gg[k] === s[j]){ present++; su[j] = true; break; } }
+      }
+      var pegs = "";
+      for(k=0;k<exact;k++){ pegs += "<span class='gold'>●</span>"; }
+      for(k=0;k<present;k++){ pegs += "<span class='muted'>○</span>"; }
+      for(k=0;k<4-exact-present;k++){ pegs += "<span class='dim'>·</span>"; }
+      line("  <span class='gold'>" + g + "</span>   " + pegs + "   <span class='dim'>(" + game.tries + "/" + game.max + ")</span>");
+      if(exact === 4){
+        line("⟁ cracked in " + game.tries + (game.tries === 1 ? " try" : " tries") + ". the lock yields.", "gold");
+        endCrack(); return;
+      }
+      if(game.tries >= game.max){
+        line("the lock holds. the cipher was <span class='gold'>" + game.secret + "</span>.", "err");
+        endCrack();
+      }
+    }
+
+    function run(raw){
+      var input = raw.trim();
+      line("<span class=\"prompt\">" + esc(promptText) + "</span> <span class=\"echo\">" + esc(input) + "</span>");
+      if(game){ if(input !== ""){ guessCrack(input.toLowerCase()); } return; }
+      if(!input){ return; }
+      history.push(input); hidx = history.length;
+      var parts = input.split(/\s+/);
+      var name = parts[0].toLowerCase();
+      var arg  = (parts[1] || "").toLowerCase();
+      if(name === "cat" || name === "open"){
+        if(COMMANDS[arg]){ COMMANDS[arg](); return; }
+        line(name + ": " + esc(parts[1] || "") + ": no such entry. try `ls`.", "err"); return;
+      }
+      if(COMMANDS[name]){ COMMANDS[name](); }
+      else { line(esc(parts[0]) + ": command not found. the gate stays shut — try `help`.", "err"); }
+    }
+
+    function focusCmd(){ cmdEl.focus(); placeCaretEnd(cmdEl); }
+    function placeCaretEnd(el){
+      try{
+        var r = document.createRange(); r.selectNodeContents(el); r.collapse(false);
+        var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      }catch(e){}
+    }
+    term.addEventListener("mousedown", function(e){
+      if(e.target.tagName === "A") return;      // let link clicks work
+      if(inputline.style.display === "none") return;
+      setTimeout(focusCmd, 0);
+    });
+    cmdEl.addEventListener("keydown", function(e){
+      if(e.key === "Enter"){
+        e.preventDefault();
+        var v = cmdEl.textContent;
+        cmdEl.textContent = "";
+        run(v);
+        scroll();
+      } else if(e.key === "ArrowUp"){
+        e.preventDefault();
+        if(hidx > 0){ hidx--; cmdEl.textContent = history[hidx] || ""; placeCaretEnd(cmdEl); }
+      } else if(e.key === "ArrowDown"){
+        e.preventDefault();
+        if(hidx < history.length){ hidx++; cmdEl.textContent = history[hidx] || ""; placeCaretEnd(cmdEl); }
+      }
+    });
+
+    function printBanner(){
+      line("RADOSŁAW MATUSIAK", "name");
+      line("senior application &amp; product security engineer", "muted");
+      line("&ldquo;I break things to prove they hold.&rdquo;", "gold");
+    }
+
+    function ready(){
+      inputline.style.display = "flex";
+      focusCmd();
+      scroll();
+    }
+
+    // ---- boot sequence ----
+    var boot = [
+      { t:"matusiak.me · tty1", c:"muted" },
+      { t:"RULE" },
+      { t:"booting strange loop ............ <span class='gold'>ok</span>", c:"muted" },
+      { t:"authenticating visitor .......... <span class='gold'>ok</span> (guest)", c:"muted" },
+      { t:"loading self-reference .......... <span class='gold'>ok</span>", c:"muted" },
+      { t:"BLANK" },
+      { t:"BANNER" },
+      { t:"BLANK" },
+      { t:"this terminal contains a description of this terminal.", c:"muted" },
+      { t:"type <span class='gold'>help</span> to begin — or <span class='gold'>whoami</span>, if you dare.", c:"muted" },
+      { t:"BLANK" }
+    ];
+
+    function emit(step){
+      if(step.t === "RULE"){ rule(); }
+      else if(step.t === "BLANK"){ blank(); }
+      else if(step.t === "BANNER"){ printBanner(); }
+      else { line(step.t, step.c); }
+    }
+
+    if(reduce){
+      boot.forEach(emit); ready();
+    } else {
+      var i = 0;
+      (function tick(){
+        if(i >= boot.length){ ready(); return; }
+        emit(boot[i]); i++; scroll();
+        setTimeout(tick, 230);
+      })();
+    }
+  })();
+  </script>
 </body>
 </html>
