@@ -111,6 +111,7 @@
     var promptText = "visitor@matusiak.me:~$";
     var history = [], hidx = 0;
     var game = null;
+    var effectActive = false;
     function setPrompt(t){ promptText = t; var el = document.getElementById("prompt"); if(el){ el.textContent = t; } }
 
     var DATA = {
@@ -180,7 +181,11 @@
       exit: function(){ line("there is no exit from a strange loop.", "muted"); },
       sudo: function(){ line("you already hold all the power you brought with you.", "muted"); },
       ls:  function(){ line("about  crack  links  whoami"); },
-      man: function(){ line("read the source. it documents itself.", "muted"); }
+      man: function(){ line("read the source. it documents itself.", "muted"); },
+      // hidden easter egg — not listed in help/ls
+      "void":  function(){ glitchEat(); },
+      abyss:   function(){ glitchEat(); },
+      oblivion:function(){ glitchEat(); }
     };
 
     // ---- crack: a small cipher-breaking game ----
@@ -230,6 +235,131 @@
       }
     }
 
+    // ---- easter egg: the void eats the screen; any key returns ----
+    function glitchEat(){
+      if(effectActive){ return; }
+      effectActive = true;
+      cmdEl.blur();
+
+      var cv = document.createElement("canvas");
+      cv.setAttribute("aria-hidden", "true");
+      cv.style.cssText = "position:fixed;inset:0;width:100vw;height:100vh;z-index:9999;background:#000;cursor:none;";
+      document.body.appendChild(cv);
+      var ctx = cv.getContext("2d");
+
+      function resize(){ cv.width = window.innerWidth; cv.height = window.innerHeight; }
+      resize();
+      window.addEventListener("resize", resize);
+
+      var glyphs = "⟁◈△◯☉⚝✶∴⌬⍟ΨΩ∞↻⟐ᚾᚱ⊹❂".split("");
+      var W = cv.width, H = cv.height, maxR = Math.sqrt(W*W + H*H) / 2;
+      var parts = [], i;
+      for(i=0;i<70;i++){
+        parts.push({ a:Math.random()*Math.PI*2, r:40+Math.random()*maxR,
+          ch:glyphs[(Math.random()*glyphs.length)|0],
+          sp:0.6+Math.random()*1.8, rot:Math.random()*Math.PI*2 });
+      }
+      var t = 0, raf = 0;
+
+      function draw(){
+        W = cv.width; H = cv.height; maxR = Math.sqrt(W*W + H*H) / 2;
+        var cx = W/2, cy = H/2;
+        t += 0.03;
+
+        // 1) hue-cycling psychedelic plasma
+        var cell = 26, x, y;
+        for(y=0;y<H;y+=cell){
+          for(x=0;x<W;x+=cell){
+            var dx = x-cx, dy = y-cy, d = Math.sqrt(dx*dx+dy*dy);
+            var v = Math.sin(x*0.012 + t) + Math.sin(y*0.014 - t*1.2)
+                  + Math.sin((x+y)*0.01 + t*0.8) + Math.sin(d*0.02 - t*2.2);
+            var hue = ((v*55 + t*50) % 360 + 360) % 360;
+            ctx.fillStyle = "hsl(" + hue.toFixed(0) + ",75%," + (8 + (v+4)*5.5).toFixed(0) + "%)";
+            ctx.fillRect(x, y, cell, cell);
+          }
+        }
+
+        // 2) rotating sacred-geometry rings
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.strokeStyle = "rgba(212,175,55,0.5)";
+        ctx.lineWidth = 1.2;
+        for(var ring=0; ring<5; ring++){
+          var sides = 3 + ring;
+          var rr = 60 + ring*55 + Math.sin(t*1.3 + ring)*14;
+          var rot = t*(ring%2 ? -0.4 : 0.4) + ring;
+          ctx.beginPath();
+          for(var s=0;s<=sides;s++){
+            var ang = rot + s/sides*Math.PI*2;
+            var px = Math.cos(ang)*rr, py = Math.sin(ang)*rr;
+            if(s===0){ ctx.moveTo(px,py); } else { ctx.lineTo(px,py); }
+          }
+          ctx.stroke();
+        }
+        ctx.restore();
+
+        // 3) mystic glyphs spiralling into the void
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        for(var p=0;p<parts.length;p++){
+          var o = parts[p];
+          o.r -= o.sp; o.a += 0.01*o.sp; o.rot += 0.05;
+          if(o.r < 18){ o.r = maxR*(0.6+Math.random()*0.4); o.a = Math.random()*Math.PI*2; o.ch = glyphs[(Math.random()*glyphs.length)|0]; }
+          var gx = cx + Math.cos(o.a)*o.r, gy = cy + Math.sin(o.a)*o.r;
+          var sz = 10 + (1 - o.r/maxR)*30;
+          ctx.save(); ctx.translate(gx, gy); ctx.rotate(o.rot);
+          ctx.fillStyle = "rgba(232,224,204," + (0.3 + (1 - o.r/maxR)*0.6).toFixed(2) + ")";
+          ctx.font = sz.toFixed(0) + "px 'JetBrains Mono', monospace";
+          ctx.fillText(o.ch, 0, 0);
+          ctx.restore();
+        }
+
+        // 4) the void that eats the screen — pulsing black hole from center
+        var grow = (Math.sin(t*0.5 - Math.PI/2)*0.5 + 0.5);
+        var vr = grow * maxR * 1.15;
+        var vg = ctx.createRadialGradient(cx, cy, Math.max(0, vr-120), cx, cy, vr+1);
+        vg.addColorStop(0, "#000");
+        vg.addColorStop(0.82, "rgba(0,0,0,0.96)");
+        vg.addColorStop(0.96, "rgba(212,175,55,0.35)");
+        vg.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = vg;
+        ctx.beginPath(); ctx.arc(cx, cy, vr, 0, Math.PI*2); ctx.fill();
+
+        // 5) glitch slices with RGB shift
+        if(Math.random() < 0.5){
+          var slices = 2 + (Math.random()*4 | 0);
+          for(var gx2=0; gx2<slices; gx2++){
+            var sy = Math.random()*H, sh = 6 + Math.random()*40, off = (Math.random()-0.5)*60;
+            try{ ctx.drawImage(cv, 0, sy, W, sh, off, sy, W, sh); }catch(e){}
+            ctx.fillStyle = (Math.random()<0.5 ? "rgba(255,0,90,0.10)" : "rgba(0,255,200,0.10)");
+            ctx.fillRect(off, sy, W, sh);
+          }
+        }
+
+        raf = window.requestAnimationFrame(draw);
+      }
+
+      function dismiss(e){
+        if(e){ e.preventDefault(); e.stopPropagation(); }
+        if(!effectActive){ return; }
+        effectActive = false;
+        if(raf){ window.cancelAnimationFrame(raf); }
+        window.removeEventListener("resize", resize);
+        window.removeEventListener("keydown", dismiss, true);
+        window.removeEventListener("mousedown", dismiss, true);
+        window.removeEventListener("touchstart", dismiss, true);
+        if(cv.parentNode){ cv.parentNode.removeChild(cv); }
+        line("you surface from the void. it remembers you.", "muted");
+        setTimeout(focusCmd, 0);
+        scroll();
+      }
+      window.addEventListener("keydown", dismiss, true);
+      window.addEventListener("mousedown", dismiss, true);
+      window.addEventListener("touchstart", dismiss, true);
+
+      draw();
+      if(reduce){ window.cancelAnimationFrame(raf); }   // one static frame for reduced-motion
+    }
+
     function run(raw){
       var input = raw.trim();
       line("<span class=\"prompt\">" + esc(promptText) + "</span> <span class=\"echo\">" + esc(input) + "</span>");
@@ -260,6 +390,7 @@
       setTimeout(focusCmd, 0);
     });
     cmdEl.addEventListener("keydown", function(e){
+      if(effectActive){ return; }
       if(e.key === "Enter"){
         e.preventDefault();
         var v = cmdEl.textContent;
